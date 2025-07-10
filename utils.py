@@ -48,7 +48,7 @@ def train_rf(df):
     model.fit(X_train, y_train)
     preds = model.predict(X_test)
     mse = mean_squared_error(y_true, y_pred)
-    rmse = np.sqrt(mse)=False)
+    rmse = np.sqrt(mse)
 
     return model, rmse
 
