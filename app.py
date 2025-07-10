@@ -85,18 +85,13 @@ if not alerts.empty:
 future_forecast = forecast_df[forecast_df["Inventory Level"].isna()][["Date", "Forecast"]].reset_index(drop=True)
 future_forecast["Date"] = pd.to_datetime(future_forecast["Date"]).dt.strftime("%d-%m-%Y")
 future_forecast.index += 1
-
-
-st.subheader("🔮 Future Forecast")
+st.subheader("Future Forecast")
 st.dataframe(future_forecast)
 
 # 📈 Actual + Forecast Line Chart
 #st.subheader(f"Actual + Forecast | Store {selected_store} | Category {selected_category}")
 #st.write(f"Model RMSE: {rmse:.2f}")
 #st.line_chart(forecast_df.set_index("Date")[["Inventory Level", "Forecast"]])
-
-
-    
 
 # ✅ Download future forecast only with Sr_No
 download_csv = future_forecast.to_csv(index=False).encode("utf-8")
