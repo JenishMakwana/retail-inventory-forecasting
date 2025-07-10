@@ -46,8 +46,8 @@ def train_rf(df):
 
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
-    preds = model.predict(X_test)
-    mse = mean_squared_error(y_true, y_pred)
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
     rmse = np.sqrt(mse)
 
     return model, rmse
