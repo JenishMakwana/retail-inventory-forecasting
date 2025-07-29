@@ -10,6 +10,10 @@ from utils import (
     check_inventory_alerts,
     save_model
 )
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+import numpy as np
+import pickle  # ✅ Added for loading model if needed in future
 
 st.set_page_config(page_title="Retail Inventory Forecasting", layout="wide")
 st.title("📈 Retail Inventory Forecasting")
@@ -20,7 +24,7 @@ data = preprocess_data(data)
 
 # Sidebar settings
 st.sidebar.header("Forecast Settings")
-forecast_days = st.sidebar.slider("Forecast Days", 7, 90, 30)
+forecast_days = st.sidebar.slider("Forecast Days", 7, 30, 14)
 alert_threshold = st.sidebar.number_input("Alert Threshold", min_value=1, value=100)
 
 store_ids = sorted(data["Store ID"].unique())
@@ -44,7 +48,29 @@ if st.checkbox("Show Raw Data"):
     st.dataframe(df_sc)
 
 # Train model
-model, rmse = train_rf(df_sc)
+model = train_rf(df_sc)
+
+# --- Model Evaluation (Backend only) ---
+features = ["Year", "Month", "Day", "Weather Condition", "Holiday/Promotion", "Price"]
+X = df_sc[features]
+y = df_sc["Inventory Level"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+
+y_train_pred = model.predict(X_train)
+y_test_pred = model.predict(X_test)
+
+train_rmse = np.sqrt(mean_squared_error(y_train, y_train_pred))
+test_rmse = np.sqrt(mean_squared_error(y_test, y_test_pred))
+
+# Check for overfitting
+is_overfitting = test_rmse > train_rmse * 1.5
+
+# Backend log
+print(f"[DEBUG] Store: {selected_store} | Category: {selected_category}")
+print(f"[DEBUG] Train RMSE: {train_rmse:.2f} | Test RMSE: {test_rmse:.2f}")
+print(f"[DEBUG] Overfitting Detected: {is_overfitting}")
+
+# Save model (now using pickle in utils.py)
 save_model(model, f"models/model_{selected_store}_{selected_category}.pkl")
 
 # Forecast
@@ -55,7 +81,6 @@ alerts = check_inventory_alerts(forecast_df, alert_threshold)
 st.subheader(f"Forecast for Store {selected_store} | Category {selected_category}")
 
 forecast_part = forecast_df[forecast_df["Forecast"].notna()]
-
 fig, ax = plt.subplots(figsize=(14, 6))
 ax.plot(
     forecast_part["Date"],
@@ -80,18 +105,13 @@ st.pyplot(fig)
 # ⚠️ Alerts
 if not alerts.empty:
     st.warning(f"⚠️ {len(alerts)} days forecasted below threshold {alert_threshold}!")
-    
+
 # 📅 Future Forecast Table with Sr_No
 future_forecast = forecast_df[forecast_df["Inventory Level"].isna()][["Date", "Forecast"]].reset_index(drop=True)
 future_forecast["Date"] = pd.to_datetime(future_forecast["Date"]).dt.strftime("%d-%m-%Y")
 future_forecast.index += 1
 st.subheader("Future Forecast")
 st.dataframe(future_forecast)
-
-# 📈 Actual + Forecast Line Chart
-#st.subheader(f"Actual + Forecast | Store {selected_store} | Category {selected_category}")
-#st.write(f"Model RMSE: {rmse:.2f}")
-#st.line_chart(forecast_df.set_index("Date")[["Inventory Level", "Forecast"]])
 
 # ✅ Download future forecast only with Sr_No
 download_csv = future_forecast.to_csv(index=False).encode("utf-8")
