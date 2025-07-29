@@ -24,12 +24,13 @@ def preprocess_data(df):
 
     return df
 
+from sklearn.model_selection import GridSearchCV
+
 
 def train_rf(df):
     df = df.copy()
     df = df.sort_values("Date")
 
-    # Define feature columns
     features = ["Year", "Month", "Day"]
     if "Weather Condition" in df.columns:
         features.append("Weather Condition")
@@ -44,13 +45,20 @@ def train_rf(df):
     X_train, X_test = X.iloc[:-7], X.iloc[-7:]
     y_train, y_test = y.iloc[:-7], y.iloc[-7:]
 
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    # 🔧 Hyperparameter tuning
+    model = RandomForestRegressor(max_depth= 3, min_samples_leaf= 4, min_samples_split= 2, n_estimators= 150,random_state=42)
     model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    rmse = np.sqrt(mse)
+    y_train_pred = model.predict(X_train)
+    y_test_pred = model.predict(X_test)
 
-    return model, rmse
+    train_rmse = np.sqrt(mean_squared_error(y_train, y_train_pred))
+    test_rmse = np.sqrt(mean_squared_error(y_test, y_test_pred))
+
+    print(f"Train RMSE: {train_rmse:.2f}")
+    print(f"Test RMSE:  {test_rmse:.2f}")
+
+    return model, test_rmse
+
 
 def forecast_inventory(df, model, days, future_weather, future_promo, future_price):
     df = df.copy()
